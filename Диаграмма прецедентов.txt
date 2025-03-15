@@ -1,0 +1,46 @@
+@startuml
+
+class Student {
+}
+
+class Application {
+}
+
+class Server {
+}
+
+class Robot {
+}
+
+class Camera {
+}
+
+class Drink {
+  + name: String
+  + type: String
+  + price: Float
+}
+
+class Order {
+  + orderId: Int
+  + drink: Drink
+  + status: String
+}
+
+' Ассоциация
+Student -- Application : uses
+
+' Агрегация
+Application o-- Server : sendsOrder
+Server o-- Robot : controls
+
+' Ассоциация
+Server -- Camera : accesses
+Robot -- Camera : receivesImages
+
+' Композиция
+Robot *-- Drink : prepares
+Robot *-- Order : serves/drinkStatus
+Order *-- Drink : contains
+
+@enduml
