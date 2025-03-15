@@ -3,7 +3,7 @@ project(_1)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(main.cpp
+add_executable(
         main.cpp
         Student.cpp
         Student.h
@@ -12,4 +12,9 @@ add_executable(main.cpp
         Camera.cpp
         Camera.h
         Drink.h
-        Order.h)
+        Order.h
+        Robot.cpp
+        Robot.h
+        Server.cpp
+        Server.h
+)

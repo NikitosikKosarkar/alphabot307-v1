@@ -1,5 +1,6 @@
-//
-// Created by chern on 15.03.2025.
-//
-
 #include "Application.h"
+#include <iostream>
+
+void Application::sendOrder(Server &server, Order &order) {
+    std::cout << "Application sends order to server." << std::endl;
+}

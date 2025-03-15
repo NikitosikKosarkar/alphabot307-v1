@@ -1,12 +1,20 @@
-#include "motor.h"
+#include "Application.h"
+#include "Server.h"
+#include "Robot.h"
+#include "Drink.h"
+#include "Order.h"
 
 int main() {
-    Motor robot_motor;
-    robot_motor.start();
-    robot_motor.moveForward(5);
-    robot_motor.moveRight();
-    robot_motor.moveBackward(3);
-    robot_motor.moveLeft();
-    robot_motor.stop();
+    Application app;
+    Server server;
+    Robot robot;
+
+    Drink coffee("Coffee", 2.5);
+    Order order(1, coffee, "Pending");
+
+    app.sendOrder(server, order);
+    server.control(robot);
+    robot.prepare(order.getDrink());
+
     return 0;
 }
