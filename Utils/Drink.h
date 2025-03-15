@@ -10,6 +10,6 @@ class Drink {
         std::string getName() {
             return name;
         };
-}
+};
 
 #endif //DRINK_H
