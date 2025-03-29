@@ -2,10 +2,12 @@
 #define SERVER_H
 
 #include "IServer.h"
+#include "MosquittoClient.h"
 
 class Server : public IServer {
-public:
-    void control(Order& order) override;
+    MosquittoClient mqttClient;
+    public:
+        void control(Order& order) override;
 };
 
 #endif // SERVER_H
