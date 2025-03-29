@@ -4,7 +4,6 @@ project(CoffeeRobotSystem LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Создаем исполняемый файл
 add_executable(CoffeeRobotSystem
         src/Application.cpp
         src/Application.h
