@@ -1,11 +1,12 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-class IServer;
-class Order;
+#include "Server.h"
+#include "Order.h"
 
 class Application {
-    public:
-        void sendOrder(IServer& server, Order& order);
+public:
+    void sendOrder(Server& server, Order& order);
 };
-#endif
+
+#endif // APPLICATION_H

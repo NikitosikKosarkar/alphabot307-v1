@@ -11,7 +11,7 @@ add_executable(CoffeeRobotSystem
         src/Camera.h
         src/Drink.cpp
         src/Drink.h
-        src/iRobot.h
+        src/IRobot.h
         src/Order.cpp
         src/Order.h
         src/Robot.cpp

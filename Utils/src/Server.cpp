@@ -4,7 +4,7 @@
 #include <iostream>
 
 void Server::control(Order& order) {
-    std::cout << "Server: Processing order #" << order.getDrink().getName() << std::endl;
+    std::cout << "Server: Processing order for " << order.getDrink().getName() << std::endl;
     order.setStatus("Processing");
 
     Robot robot;
