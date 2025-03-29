@@ -1,20 +1,20 @@
-#include "Application.h"
-#include "Server.h"
-#include "Robot.h"
-#include "Drink.h"
-#include "Order.h"
+#include "src/Application.h"
+#include "src/Student.h"
+#include "src/Drink.h"
+#include "src/Order.h"
+#include "src/Server.h"
 
 int main() {
+    Student student;
     Application app;
     Server server;
-    Robot robot;
 
-    Drink coffee("Coffee", 2.5);
-    Order order(1, coffee, "Pending");
+    student.useApp();
+
+    Drink coffee("Latte", 3.50f);
+    Order order(1, coffee, "New");
 
     app.sendOrder(server, order);
-    server.control(robot);
-    robot.prepare(order.getDrink());
 
     return 0;
 }
