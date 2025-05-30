@@ -2,7 +2,6 @@ import enum
 import logging
 import sys
 
-# Configure basic logging
 logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(asctime)s %(message)s",
@@ -33,7 +32,6 @@ def string_to_robot_command(cmd_str: str) -> RobotCommand:
 
 DEFAULT_ACTION_DURATION_S = 0.25
 
-# Logger instance
 logger = logging.getLogger("AlphaBotServer")
 
 def log_info(msg):
