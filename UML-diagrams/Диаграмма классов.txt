@@ -1,106 +1,96 @@
-@startuml RobotSystemArchitecture
+@startuml
+' Settings
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
 
-package "Python Server" {
-    class RobotControlSystem {
-        -broker_ip: str = "192.168.1.102"
-        -port: int = 1883
-        -robot_topic: str = "robot/gpio"
-        -client: mqtt.Client
-        -cap: cv2.VideoCapture
-        -running: bool
-        -vision_enabled: bool
-        -angle_threshold_deg: float = 10.0
-        -distance_threshold_px: float = 50.0
-        -turn_duration_s: float = 0.05
-        -forward_duration_s: float = 0.1
+package "Robot (C++)" {
+  class GPIOController {
+    - gpio_pins: std::vector<int>
+    - gpio_chip_fd: int
+    --
+    - gpio_write(offset: int, value: uint8_t): void
+    --
+    + GPIOController()
+    + forward(time_ms: int): void
+    + stop(): void
+    + right(time_ms: int): void
+    + left(time_ms: int): void
+    + ~GPIOController()
+  }
 
-        +initialize_camera()
-        +on_connect()
-        +start()
-        +shutdown()
-        +handle_shutdown_signal()
-        +cleanup()
-        +send_gpio_command(command: str)
-    }
+  class MqttGpioReceiver {
+    - mosq_: struct mosquitto*
+    - topic_: const char*
+    - last_gpio_data_ptr_: std::atomic<std::shared_ptr<const std::string>>
+    - thread_: std::thread
+    - running_: std::atomic<bool>
+    --
+    - {static} message_callback(mosq: struct mosquitto*, obj: void*, msg: const struct mosquitto_message*): void
+    - loop(): void
+    --
+    + MqttGpioReceiver(host: const char*, port: int, topic: const char*)
+    + ~MqttGpioReceiver()
+    + get_gpio_data(): std::string
+  }
 
-    class CameraProcessor {
-        -hsv_ranges: dict
-        -debug_mode: bool
-        -process_frame_width: int = 640
-        -KERNEL_MORPH_OPEN: np.array
-        -KERNEL_MORPH_CLOSE_5x5: np.array
-        -KERNEL_MORPH_CLOSE_7x7: np.array
-        -OUTPUT_WINDOW_NAME: str = "Camera Debug Output"
+  class GpioProcessor {
+    - gpio_: GPIOController&
+    - receiver_: MqttGpioReceiver&
+    --
+    + GpioProcessor(gpio: GPIOController&, receiver: MqttGpioReceiver&)
+    + run(): void
+  }
 
-        +get_processing_results(original_img, base_min_area_scale_factor=1.0)
-        +get_current_hsv_ranges()
-        +release_windows()
-        +_find_largest_contour_and_centroid(mask, min_area=30)
-        +_setup_debug_windows()
-    }
-
-    RobotControlSystem *-- CameraProcessor
-    CameraProcessor --> "-parent_vision_enabled" RobotControlSystem
+  note "main() function instantiates these classes:\nGPIOController\nMqttGpioReceiver\nGpioProcessor" as MainNote
+  GpioProcessor .. MainNote
 }
 
-package "C++ Client" {
-    class NetworkHandler {
-        -mqtt_client: mosquitto*
-        -current_topic: string
-
-        +publishMessage()
-        +getCommand()
-    }
-
-    class MotionController {
-        +moveForward()
-        +turnLeft()
-        +halt()
-    }
-
-    class PinManager {
-        +setPinState()
-    }
-
-    class CommandProcessor {
-        -running: bool
-
-        +run()
-        +stop()
-    }
-
-    MotionController --|> PinManager
-    CommandProcessor *-- MotionController
-    CommandProcessor *-- NetworkHandler
+package "Server (Python)" {
+  class RobotControlSystem {
+    - broker_ip: str
+    - port: int
+    - robot_topic: str
+    - client: mqtt.Client
+    - cap: cv2.VideoCapture
+    - window_name: str
+    - running: bool
+    - vision_enabled: bool
+    - show_camera: bool
+    - front: tuple
+    - back: tuple
+    - target: tuple
+    --
+    + __init__()
+    + initialize_camera(): cv2.VideoCapture
+    + on_connect(client, userdata, flags, reason_code, properties): void
+    + send_gpio_command(command: str): void
+    + process_frame(): bool
+    + draw_detections(frame): void
+    + find_center(mask): tuple
+    + get_angle_to_target(): float
+    + get_distance_to_target(): float
+    + vision_control_loop(): void
+    + start(): void
+    + shutdown(signum=None, frame=None): void
+    + cleanup(): void
+  }
+  note "main script instantiates RobotControlSystem" as PyMainNote
+  RobotControlSystem .. PyMainNote
 }
 
-' Связи между сервером и клиентом
-RobotControlSystem -- NetworkHandler : MQTT\n<robot/gpio>
-NetworkHandler ..> CommandProcessor : commands\nforward/left/right/stop
+' Relationships
+GpioProcessor o-- GPIOController
+GpioProcessor o-- MqttGpioReceiver
 
-note top of RobotControlSystem
-    Основной серверный класс:
-    - Управление подключением к MQTT брокеру
-    - Обработка видео с камеры
-    - Логика автономного управления
-    - Обработка пользовательского ввода
-    - Управление жизненным циклом системы
-end note
+MqttGpioReceiver ..> "<<library>>\nmosquitto" : uses
+GPIOController ..> "<<library>>\nlinux/gpio.h" : uses
 
-note top of CameraProcessor
-    Обработчик изображений:
-    - Обнаружение маркеров робота (розовый/синий)
-    - Обнаружение цели (зеленый)
-    - Расчет расстояния и угла до цели
-    - Отладочная визуализация
-    - Поддержка динамического изменения HSV-диапазонов
-end note
+RobotControlSystem ..> "<<library>>\npaho.mqtt.client" : uses
+RobotControlSystem ..> "<<library>>\ncv2 (OpenCV)" : uses
+RobotControlSystem ..> "<<library>>\nnumpy" : uses
 
-note top of CommandProcessor
-    Клиентский обработчик команд:
-    - Получает команды от сервера
-    - Управляет движением робота
-    - Работает в отдельном потоке
-end note
+' Communication between systems
+RobotControlSystem ..> MqttGpioReceiver : "MQTT\n(robot/gpio topic)"
 
 @enduml

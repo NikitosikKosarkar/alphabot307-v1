@@ -1,28 +1,45 @@
-cmake_minimum_required(VERSION 3.10)
-project(RobotClient LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.14)
+
+project(Robot)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-find_package(Threads REQUIRED)
-find_library(MOSQUITTO_LIB mosquitto REQUIRED)
-
-include_directories(include)
-
-add_executable(robot_client
-    src/main.cpp
-    src/pin_manager.cpp
-    src/motion_controller.cpp
-    src/network_handler.cpp
-    src/command_processor.cpp
+add_executable(${Robot}
+    robot.cpp
 )
 
-target_link_libraries(robot_client
-    PRIVATE
-    Threads::Threads
-    ${MOSQUITTO_LIB}
+include(FetchContent)
+
+set(WITH_DOCS OFF CACHE BOOL "Mosquitto: Disable documentation build" FORCE)
+set(WITH_APPS OFF CACHE BOOL "Mosquitto: Disable application build" FORCE)
+set(WITH_TLS OFF CACHE BOOL "Mosquitto: Disable SSL/TLS support" FORCE)
+set(WITH_PIC ON CACHE BOOL "Mosquitto: Build with Position Independent Code" FORCE)
+set(WITH_CPP ON CACHE BOOL "Mosquitto: Build C++ wrapper (libmosquittopp)" FORCE)
+set(WITH_STATIC_LIBRARIES ON CACHE BOOL "Mosquitto: Build static libraries" FORCE)
+set(WITH_SHARED_LIBRARIES OFF CACHE BOOL "Mosquitto: Do NOT build shared libraries" FORCE)
+
+FetchContent_Declare(
+    mosquitto
+    GIT_REPOSITORY https://github.com/eclipse/mosquitto.git
+    GIT_TAG        a196c2b244f248072a6b3ac8fb3f00ce0ff63dea
+)
+FetchContent_MakeAvailable(mosquitto)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${mosquitto_SOURCE_DIR}/include
+    ${mosquitto_SOURCE_DIR}/lib/cpp
+    ${mosquitto_BINARY_DIR}
 )
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    target_link_libraries(robot_client PRIVATE -lrt)
-endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    mosquittopp
+    mosquitto
+    pthread
+)
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+
+# target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
