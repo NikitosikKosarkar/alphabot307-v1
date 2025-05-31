@@ -1,46 +1,75 @@
-@startuml
+@startuml SimplifiedRobotArchitecture
 
-class Student {
+package "Client (C++)" {
+    class CommandProcessor {
+        +run(): void
+        +stop(): void
+    }
+
+    class MotionController {
+        +moveForward(): void
+        +moveBackward(): void
+        +turnLeft(): void
+        +turnRight(): void
+        +halt(): void
+    }
+
+    class NetworkHandler {
+        +publishMessage(): void
+        +getCommand(): string
+        +isConnected(): bool
+    }
+
+    class PinManager {
+        +setPinState(): void
+        +halt(): void
+    }
+
+    class Main {
+        +main(): int
+    }
 }
 
-class Application {
+package "Server (Python)" {
+    class MainServer {
+        +start(): void
+        +stop(): void
+    }
 }
 
-class Server {
-}
-
-class Robot {
-}
-
-class Camera {
-}
-
-class Drink {
-  + name: String
-  + type: String
-  + price: Float
-}
-
-class Order {
-  + orderId: Int
-  + drink: Drink
-  + status: String
-}
-
-' Ассоциация
-Student -- Application : uses
-
-' Агрегация
-Application o-- Server : sendsOrder
-Server o-- Robot : controls
-
-' Ассоциация
-Server -- Camera : accesses
-Robot -- Camera : receivesImages
+' Наследование
+MotionController --|> PinManager
 
 ' Композиция
-Robot *-- Drink : prepares
-Robot *-- Order : serves/drinkStatus
-Order *-- Drink : contains
+CommandProcessor *-- MotionController
+CommandProcessor *-- NetworkHandler
+Main *-- CommandProcessor
+Main *-- MotionController
+Main *-- NetworkHandler
+
+' Зависимости
+NetworkHandler ..> CommandProcessor : MQTT messages
+MainServer ..> NetworkHandler : via MQTT
+
+note top of PinManager
+    Управление GPIO пинами
+    (6,12,13,20,21,26)
+end note
+
+note bottom of MotionController
+    Контроль двигателей через
+    4 пина направления
+end note
+
+note right of NetworkHandler
+    MQTT клиент для связи
+    Подписка: robot/gpio
+    Публикация: robot/status
+end note
+
+note left of CommandProcessor
+    Обработчик команд
+    Цикл опроса: 100мс
+end note
 
 @enduml
