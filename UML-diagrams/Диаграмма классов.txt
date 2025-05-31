@@ -1,75 +1,106 @@
-@startuml SimplifiedRobotArchitecture
+@startuml RobotSystemArchitecture
 
-package "Client (C++)" {
-    class CommandProcessor {
-        +run(): void
-        +stop(): void
+package "Python Server" {
+    class RobotControlSystem {
+        -broker_ip: str = "192.168.1.102"
+        -port: int = 1883
+        -robot_topic: str = "robot/gpio"
+        -client: mqtt.Client
+        -cap: cv2.VideoCapture
+        -running: bool
+        -vision_enabled: bool
+        -angle_threshold_deg: float = 10.0
+        -distance_threshold_px: float = 50.0
+        -turn_duration_s: float = 0.05
+        -forward_duration_s: float = 0.1
+
+        +initialize_camera()
+        +on_connect()
+        +start()
+        +shutdown()
+        +handle_shutdown_signal()
+        +cleanup()
+        +send_gpio_command(command: str)
+    }
+
+    class CameraProcessor {
+        -hsv_ranges: dict
+        -debug_mode: bool
+        -process_frame_width: int = 640
+        -KERNEL_MORPH_OPEN: np.array
+        -KERNEL_MORPH_CLOSE_5x5: np.array
+        -KERNEL_MORPH_CLOSE_7x7: np.array
+        -OUTPUT_WINDOW_NAME: str = "Camera Debug Output"
+
+        +get_processing_results(original_img, base_min_area_scale_factor=1.0)
+        +get_current_hsv_ranges()
+        +release_windows()
+        +_find_largest_contour_and_centroid(mask, min_area=30)
+        +_setup_debug_windows()
+    }
+
+    RobotControlSystem *-- CameraProcessor
+    CameraProcessor --> "-parent_vision_enabled" RobotControlSystem
+}
+
+package "C++ Client" {
+    class NetworkHandler {
+        -mqtt_client: mosquitto*
+        -current_topic: string
+
+        +publishMessage()
+        +getCommand()
     }
 
     class MotionController {
-        +moveForward(): void
-        +moveBackward(): void
-        +turnLeft(): void
-        +turnRight(): void
-        +halt(): void
-    }
-
-    class NetworkHandler {
-        +publishMessage(): void
-        +getCommand(): string
-        +isConnected(): bool
+        +moveForward()
+        +turnLeft()
+        +halt()
     }
 
     class PinManager {
-        +setPinState(): void
-        +halt(): void
+        +setPinState()
     }
 
-    class Main {
-        +main(): int
+    class CommandProcessor {
+        -running: bool
+
+        +run()
+        +stop()
     }
+
+    MotionController --|> PinManager
+    CommandProcessor *-- MotionController
+    CommandProcessor *-- NetworkHandler
 }
 
-package "Server (Python)" {
-    class MainServer {
-        +start(): void
-        +stop(): void
-    }
-}
+' Связи между сервером и клиентом
+RobotControlSystem -- NetworkHandler : MQTT\n<robot/gpio>
+NetworkHandler ..> CommandProcessor : commands\nforward/left/right/stop
 
-' Наследование
-MotionController --|> PinManager
-
-' Композиция
-CommandProcessor *-- MotionController
-CommandProcessor *-- NetworkHandler
-Main *-- CommandProcessor
-Main *-- MotionController
-Main *-- NetworkHandler
-
-' Зависимости
-NetworkHandler ..> CommandProcessor : MQTT messages
-MainServer ..> NetworkHandler : via MQTT
-
-note top of PinManager
-    Управление GPIO пинами
-    (6,12,13,20,21,26)
+note top of RobotControlSystem
+    Основной серверный класс:
+    - Управление подключением к MQTT брокеру
+    - Обработка видео с камеры
+    - Логика автономного управления
+    - Обработка пользовательского ввода
+    - Управление жизненным циклом системы
 end note
 
-note bottom of MotionController
-    Контроль двигателей через
-    4 пина направления
+note top of CameraProcessor
+    Обработчик изображений:
+    - Обнаружение маркеров робота (розовый/синий)
+    - Обнаружение цели (зеленый)
+    - Расчет расстояния и угла до цели
+    - Отладочная визуализация
+    - Поддержка динамического изменения HSV-диапазонов
 end note
 
-note right of NetworkHandler
-    MQTT клиент для связи
-    Подписка: robot/gpio
-    Публикация: robot/status
-end note
-
-note left of CommandProcessor
-    Обработчик команд
-    Цикл опроса: 100мс
+note top of CommandProcessor
+    Клиентский обработчик команд:
+    - Получает команды от сервера
+    - Управляет движением робота
+    - Работает в отдельном потоке
 end note
 
 @enduml
